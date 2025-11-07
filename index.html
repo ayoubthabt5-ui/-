@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>كويز مخصّص — لأنك مميزة</title>
+<style>
+  :root{
+    --bg1:#fff5fb; --bg2:#f0f8ff; --accent:#ff4d94; --accent-dark:#e60073;
+    --card:#ffffff; --muted:#7a7a8a;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; font-family: "Cairo", system-ui, Arial; background: linear-gradient(180deg,var(--bg1),var(--bg2));
+    color:#222; -webkit-font-smoothing:antialiased;
+  }
+  .container{max-width:760px;margin:28px auto;padding:18px;}
+  .card{
+    background:var(--card); border-radius:16px; padding:18px; box-shadow:0 8px 30px rgba(0,0,0,0.08);
+  }
+  header{display:flex;gap:12px;align-items:center}
+  .logo{width:64px;height:64px;border-radius:12px;background:linear-gradient(135deg,var(--accent),var(--accent-dark));
+         display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:22px}
+  h1{margin:0;font-size:20px}
+  p.lead{margin:6px 0 0;color:var(--muted)}
+  /* input screen */
+  .center{display:flex;flex-direction:column;align-items:center;gap:12px;padding:24px;text-align:center}
+  input[type="text"]{
+    width:100%;max-width:420px;padding:12px 14px;border-radius:12px;border:1px solid #eee;font-size:16px;
+    box-shadow:inset 0 1px 0 rgba(0,0,0,0.03);
+  }
+  button.cta{
+    padding:12px 18px;border-radius:12px;border:none;background:var(--accent);color:#fff;font-weight:700;
+    font-size:16px;cursor:pointer;box-shadow:0 8px 18px rgba(230,0,115,0.18);transition:transform .12s;
+  }
+  button.cta:active{transform:translateY(2px)}
+  /* quiz */
+  .progress{height:8px;background:#f0f0f5;border-radius:99px;overflow:hidden;margin-bottom:12px}
+  .progress > i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-dark));width:0%}
+  .question{margin:8px 0 18px;font-weight:700}
+  .options{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+  .opt{
+    background:linear-gradient(180deg,#fff,#fff);padding:12px;border-radius:12px;border:1px solid #f0e8f3;cursor:pointer;
+    transition:transform .12s, box-shadow .12s; display:flex;gap:10px;align-items:center;
+  }
+  .opt:hover{transform:translateY(-6px);box-shadow:0 10px 24px rgba(0,0,0,0.06)}
+  .opt span.emoji{font-size:22px}
+  .controls{display:flex;gap:8px;justify-content:space-between;margin-top:18px;align-items:center}
+  .small{font-size:13px;color:var(--muted)}
+  /* result */
+  .result-box{display:flex;flex-direction:column;align-items:center;gap:12px;padding:10px}
+  .big-heart{font-size:84px;color:var(--accent);text-shadow:0 6px 30px rgba(255,77,148,0.2);transform:scale(0);transition:transform .45s cubic-bezier(.2,.9,.3,1)}
+  .big-heart.show{transform:scale(1)}
+  .result-title{font-size:20px;margin:4px 0}
+  .result-desc{color:var(--muted);text-align:center;padding:0 8px}
+  .actions{display:flex;gap:10px}
+  .btn-ghost{background:#fff;border:1px solid #eee;padding:10px 14px;border-radius:10px;cursor:pointer}
+  /* confetti canvas */
+  #confetti{pointer-events:none;position:fixed;left:0;top:0;width:100%;height:100%;z-index:9999}
+  /* responsive */
+  @media (max-width:520px){
+    .options{grid-template-columns:1fr}
+    .logo{width:56px;height:56px}
+    .big-heart{font-size:64px}
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="card" id="introCard">
+    <header>
+      <div class="logo">❤</div>
+      <div>
+        <h1>كويز مخصّص — تعرّفي على نفسك بطريقة مرحة</h1>
+        <p class="lead">أدخل اسمك وابدأي — الأسئلة خفيفة وممتعة، والنتيجة مخصّصة لكِ 😍</p>
+      </div>
+    </header>
+
+    <div class="center" style="margin-top:18px">
+      <input id="userName" type="text" placeholder="اكتبي اسمك هنا..." />
+      <div style="display:flex;gap:10px;margin-top:8px">
+        <button class="cta" id="startBtn">ابدأي الكويز</button>
+        <button class="btn-ghost" id="randomBtn">اسم عشوائي</button>
+      </div>
+      <p class="small" style="margin-top:6px">الكويز محمول-فريندلي ويعمل على الهاتف</p>
+    </div>
+  </div>
+
+  <div class="card" id="quizCard" style="margin-top:18px;display:none">
+    <div class="progress"><i id="progressFill"></i></div>
+    <div id="questionArea">
+      <!-- يملأ بالديناميكي -->
+    </div>
+
+    <div class="controls">
+      <div class="small" id="qIndex">السؤال 1 من 6</div>
+      <div>
+        <button class="btn-ghost" id="prevBtn" disabled>السابق</button>
+        <button class="cta" id="nextBtn">التالي</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="resultCard" style="margin-top:18px;display:none">
+    <div class="result-box">
+      <div class="big-heart" id="bigHeart">❤</div>
+      <div class="result-title" id="resultTitle"></div>
+      <div class="result-desc" id="resultDesc"></div>
+      <div class="actions">
+        <button class="cta" id="shareBtn">مشاركة</button>
+        <button class="btn-ghost" id="retryBtn">إعادة</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<canvas id="confetti"></canvas>
+
+<script>
+/* ====== بيانات الأسئلة (قابلة للتعديل بسهولة) ====== */
+const QUESTIONS = [
+  { q: "ما النوع المفضّل لديكِ لقضاء وقت ممتع؟", opts: [
+      {t:"نزهة رومانسية", v:3, e:"🌹"}, {t:"سينما ومقابلة أصدقاء", v:1, e:"🎬"},
+      {t:"قراءة مع قهوة", v:2, e:"📚"}, {t:"مغامرة خارجية", v:0, e:"🏕️"}]},
+  { q: "أيّ شيء يجذبك بسرعة؟", opts: [
+      {t:"اللطافة والاهتمام", v:3, e:"💞"}, {t:"الذكاء والفكاهة", v:1, e:"🧠"},
+      {t:"الطموح والجدّية", v:2, e:"🚀"}, {t:"الراحة والبساطة", v:0, e:"🌿"}]},
+  { q: "لو تعطي يوم كامل، ماذا تختارين؟", opts: [
+      {t:"يوم تدليل وهدوء", v:3, e:"🛁"}, {t:"تجربة مطعم جديد", v:1, e:"🍽️"},
+      {t:"تعلم شيء جديد", v:2, e:"📖"}, {t:"العمل على مشروع", v:0, e:"🛠️"}]},
+  { q: "كيف تفضّلين الهدايا؟", opts: [
+      {t:"رسالة مكتوبة وتعابير", v:3, e:"💌"}, {t:"هدية عملية", v:1, e:"🎁"},
+      {t:"شيء مميز وخارجي", v:2, e:"🌟"}, {t:"لا هدايا فقط وقت!", v:0, e:"⏳"}]},
+  { q: "ما المزاج الموسيقي الأفضل لكِ؟", opts: [
+      {t:"أغاني رومانسية", v:3, e:"🎵"}, {t:"موسيقى مرحة", v:1, e:"🎉"},
+      {t:"هدوء واسترخاء", v:2, e:"🎧"}, {t:"موسيقى تحفيزية", v:0, e:"🔥"}]},
+  { q: "أهم صفة في الشريك حسبكِ؟", opts: [
+      {t:"الاهتمام والاحترام", v:3, e:"🤝"}, {t:"المرح والجرأة", v:1, e:"😄"},
+      {t:"الطموح والالتزام", v:2, e:"🏆"}, {t:"الهدوء والسهولة", v:0, e:"🕊️"}]},
+];
+
+/* ====== حالات ========= */
+let state = {
+  name: null,
+  index: 0,
+  answers: Array(QUESTIONS.length).fill(null),
+};
+
+/* ====== عناصر DOM ====== */
+const introCard = document.getElementById('introCard');
+const quizCard = document.getElementById('quizCard');
+const resultCard = document.getElementById('resultCard');
+const startBtn = document.getElementById('startBtn');
+const randomBtn = document.getElementById('randomBtn');
+const userName = document.getElementById('userName');
+const questionArea = document.getElementById('questionArea');
+const nextBtn = document.getElementById('nextBtn');
+const prevBtn = document.getElementById('prevBtn');
+const qIndex = document.getElementById('qIndex');
+const progressFill = document.getElementById('progressFill');
+const bigHeart = document.getElementById('bigHeart');
+const resultTitle = document.getElementById('resultTitle');
+const resultDesc = document.getElementById('resultDesc');
+const shareBtn = document.getElementById('shareBtn');
+const retryBtn = document.getElementById('retryBtn');
+const confettiCanvas = document.getElementById('confetti');
+
+/* ====== بدء الكويز ====== */
+startBtn.addEventListener('click', () => {
+  const name = userName.value.trim();
+  if(!name) return alert('من فضلك أدخلي اسمًا لتبدأي 😊');
+  state.name = name;
+  introCard.style.display = 'none';
+  quizCard.style.display = 'block';
+  renderQuestion();
+});
+
+/* اسم عشوائي للمعاينة */
+randomBtn.addEventListener('click', () => {
+  const samples = ["ليلى","سارة","نورا","لمى","هند","جنى"];
+  userName.value = samples[Math.floor(Math.random()*samples.length)];
+});
+
+/* ====== عرض السؤال الحالي ====== */
+function renderQuestion(){
+  const i = state.index;
+  const item = QUESTIONS[i];
+  progressFill.style.width = `${(i/QUESTIONS.length)*100}%`;
+  qIndex.textContent = `السؤال ${i+1} من ${QUESTIONS.length}`;
+  prevBtn.disabled = (i===0);
+  nextBtn.textContent = (i===QUESTIONS.length-1) ? 'إنهاء' : 'التالي';
+
+  // محتوى السؤال
+  questionArea.innerHTML = `
+    <div class="question">${item.q}</div>
+    <div class="options" id="opts"></div>
+  `;
+  const opts = document.getElementById('opts');
+  item.opts.forEach((o, idx) => {
+    const el = document.createElement('div');
+    el.className = 'opt';
+    el.innerHTML = `<div style="display:flex;align-items:center;gap:12px"><span class="emoji">${o.e}</span><div><div style="font-weight:700">${o.t}</div></div></div>`;
+    // تمييز اختيار سابق
+    if(state.answers[i] && state.answers[i].choice === idx) el.style.boxShadow = "0 10px 30px rgba(255,77,148,0.12)";
+    el.onclick = () => {
+      state.answers[i] = { choice: idx, value: o.v };
+      // بصري
+      [...opts.children].forEach(c => c.style.boxShadow = 'none');
+      el.style.boxShadow = "0 10px 30px rgba(255,77,148,0.12)";
+    };
+    opts.appendChild(el);
+  });
+}
+
+/* ====== التنقل ====== */
+prevBtn.addEventListener('click', () => {
+  if(state.index>0) { state.index--; renderQuestion(); }
+});
+nextBtn.addEventListener('click', () => {
+  // تأكد من اختيار إجابة
+  if(!state.answers[state.index]) return alert('يرجى اختيار إجابة للمتابعة');
+  if(state.index < QUESTIONS.length-1){
+    state.index++; renderQuestion();
+  } else {
+    finishQuiz();
+  }
+});
+
+/* ====== إنهاء وحساب النتيجة ====== */
+function finishQuiz(){
+  // حساب مجموع القيم
+  const score = state.answers.reduce((s,a)=> s + (a? a.value:0), 0);
+  // تصنيف مبسّط الى 3 نتائج
+  let title='', desc='';
+  if(score >= (QUESTIONS.length*3) * 0.7){
+    title = `أنتِ قلب رقيق ورومانسي 🌸، ${state.name}`;
+    desc = 'تقدّرين اللمسات الحسّاسة والاهتمام، وتحبين اللحظات الدافئة والاستثناء.';
+  } else if(score >= (QUESTIONS.length*3) * 0.4){
+    title = `متوازنة ومتمتعة بالحياة ✨، ${state.name}`;
+    desc = 'تحبين المرح والراحة مع لمسات رومانسية؛ تحافظين على التوازن بين الجدية والمرح.';
+  } else {
+    title = `مغامِرة وعملية 🔥، ${state.name}`;
+    desc = 'تحبين المبادرات والتجارب الجديدة، وتقدرين الصدق والوضوح في العلاقات.';
+  }
+
+  // عرض النتيجة
+  quizCard.style.display = 'none';
+  resultCard.style.display = 'block';
+  resultTitle.textContent = title;
+  resultDesc.textContent = desc;
+  // قلب يظهر مع انيميشن
+  setTimeout(()=> bigHeart.classList.add('show'), 80);
+
+  // كونفتي
+  launchConfetti();
+}
+
+/* ====== مشاركة/إعادة ====== */
+shareBtn.addEventListener('click', async () => {
+  const text = `نتيجتي في الكويز: ${resultTitle.textContent}\n${resultDesc.textContent}`;
+  if(navigator.share){
+    try { await navigator.share({title:'كويز مخصّص', text}); }
+    catch(e){}
+  } else {
+    // fallback: نسخ للحافظة
+    try {
+      await navigator.clipboard.writeText(text);
+      alert('تم نسخ النتيجة للوحه المشاركة — شاركيها مع من تحبين!');
+    } catch(e){
+      alert('جهازك لا يدعم المشاركة التلقائية. يمكنك نسخ النتيجة يدويًا.');
+    }
+  }
+});
+
+retryBtn.addEventListener('click', () => {
+  // إعادة تهيئة
+  state.index = 0; state.answers = Array(QUESTIONS.length).fill(null);
+  bigHeart.classList.remove('show');
+  resultCard.style.display = 'none';
+  introCard.style.display = 'block';
+});
+
+/* ====== كونفتي بسيط بالـ canvas ====== */
+function launchConfetti(){
+  const canvas = confettiCanvas;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width = window.innerWidth;
+  const H = canvas.height = window.innerHeight;
+  let particles = [];
+  for(let i=0;i<80;i++){
+    particles.push({
+      x: W/2 + (Math.random()-0.5)*200,
+      y: H/3 + (Math.random()-0.5)*80,
+      vx: (Math.random()-0.5)*6,
+      vy: Math.random()*-6 - 2,
+      size: 6+Math.random()*8,
+      rot: Math.random()*360,
+      color: ['#ff4d94','#ffd166','#8ecae6','#90be6d','#c77dff'][Math.floor(Math.random()*5)]
+    });
+  }
+  let t=0;
+  function loop(){
+    ctx.clearRect(0,0,W,H);
+    particles.forEach((p,i)=>{
+      p.x += p.vx; p.y += p.vy; p.vy += 0.15; p.rot += 6;
+      ctx.save();
+      ctx.translate(p.x,p.y);
+      ctx.rotate(p.rot*Math.PI/180);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size*0.7);
+      ctx.restore();
+      if(p.y > H+50) particles.splice(i,1);
+    });
+    t++;
+    if(particles.length>0 && t<400) requestAnimationFrame(loop);
+    else ctx.clearRect(0,0,W,H);
+  }
+  loop();
+}
+
+/* ====== تحسين: ارجاع للصفحة إذا قطع التحديث ====== */
+window.addEventListener('resize', () => {
+  // canvas يتغير أوتوماتيك
+  confettiCanvas.width = window.innerWidth;
+  confettiCanvas.height = window.innerHeight;
+});
+
+</script>
+</body>
+</html>
